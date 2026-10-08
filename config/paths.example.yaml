@@ -1,0 +1,33 @@
+# Template for config/paths.local.yaml (gitignored). Copy this file to paths.local.yaml and fill in real paths;
+# data never enters git. See docs/REPRODUCE.md for what each folder must contain.
+data_root: "/path/to/DATA_ROOT"
+raw_dir: "/path/to/DATA_ROOT/raw"
+interim_dir: "/path/to/DATA_ROOT/interim"
+processed_dir: "/path/to/DATA_ROOT/processed"
+outputs_dir: "/path/to/DATA_ROOT/outputs"
+
+# Permanent cache of the raw global ISIMIP3b files, reused across the three study countries so they are never
+# downloaded twice. Can live anywhere with enough free space (hundreds of GB if all global files are kept).
+isimip_global_cache_dir: "/path/to/ISIMIP_CACHE"
+
+# Optional: fast local disk for the download in progress (at least 20 GB free). The finished file is validated and
+# then moved into isimip_global_cache_dir.
+isimip_staging_dir: "/path/to/SSD_STAGING"
+
+# Global Energy Monitor, Global Integrated Power Tracker (xlsx, downloaded from globalenergymonitor.org).
+gem_file: "/path/to/DATA_ROOT/raw/gem/gem_global_integrated_power_tracker.xlsx"
+
+# WRI Aqueduct 4.0 package (aqueduct-4-0-water-risk-data.zip, or its extracted CSV files).
+aqueduct_dir: "/path/to/DATA_ROOT/raw/aqueduct"
+
+# Natural Earth 10 m shapefiles (ne_10m_coastline, ne_10m_rivers_lake_centerlines).
+natural_earth_coastline: "/path/to/DATA_ROOT/raw/boundaries/ne_10m_coastline.shp"
+natural_earth_rivers: "/path/to/DATA_ROOT/raw/boundaries/ne_10m_rivers_lake_centerlines.shp"
+
+# GADM 4.1 country files gadm41_BRA.gpkg, gadm41_IND.gpkg, gadm41_PRT.gpkg go in raw_dir/gadm.
+emdat_dir: "/path/to/DATA_ROOT/raw/emdat"      # only copied by the acquisition step; no result uses EM-DAT
+gadm_dir: "/path/to/DATA_ROOT/raw/gadm"
+
+# GADM 4.1 Brazil shapefiles (gadm41_BRA_0_mainland.shp, gadm41_BRA_1_mainland.shp) for the article maps
+# (scripts/geo_base.py). GADM cannot be redistributed; obtain it from gadm.org.
+gadm_bra_dir: "/path/to/gadm/BRA"

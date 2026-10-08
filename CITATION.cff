@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "CREEI: Climate Risk Exposure of Energy Infrastructure (Brazil)"
+type: software
+authors:
+  - family-names: "Oliveira"
+    name-particle: "de"
+    given-names: "Douglas S."
+    orcid: "https://orcid.org/0009-0003-6857-0122"
+    affiliation: "Universidade Federal de Minas Gerais, Departamento de Engenharia Nuclear, Escola de Engenharia"
+  - family-names: "Velasquez"
+    given-names: "Carlos E."
+    orcid: "https://orcid.org/0000-0002-2960-3150"
+    affiliation: "Universidade Federal de Minas Gerais, Departamento de Engenharia Nuclear, Escola de Engenharia"
+license: MIT
+repository-code: "https://github.com/DougzSO/creei-brazil"
+# date-released (2026), version and doi are added at release (tag and Zenodo DOI)

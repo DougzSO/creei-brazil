@@ -1,0 +1,119 @@
+"""Daily heat and precipitation indices (Step 4).
+
+For each model x scenario x country, loads the cropped tasmax/pr files
+selects only the unique 0.5deg cells actually used by a
+plant (the plant_cell.parquet), and computes TX35/TX40 (annual),
+N35 (monthly), wet-day P95 baseline threshold + exceedance frequency, and
+Rx5day (annual). Writes `indices_daily.parquet`.
+
+This machine has ~6 GB RAM (not the 32 GB the original time estimate
+assumes), and a country's daily tasmax/pr at its full ~1,000-cell set is
+tens of millions of rows once exploded to a long frame. Each (model,
+scenario, variable) daily frame is therefore built, reduced to its (much
+smaller) annual/monthly aggregate immediately, and freed (`del` + a
+targeted `gc.collect()`) before the next one -- peak memory is one
+daily frame, not the whole country/model/scenario cross product.
+"""
+
+import gc
+from pathlib import Path
+
+import pandas as pd
+
+from creei.acquire.isimip import STUDY_COUNTRIES
+from creei.config import load_datasets, load_params, load_paths
+from creei.hazards import heat, precip
+from creei.hazards.loading import period_years, pr_daily, tasmax_daily, unique_cells_by_country
+
+
+def with_labels(df: pd.DataFrame, model: str, scenario: str, period: str) -> pd.DataFrame:
+    out = df.copy()
+    out["model"], out["scenario"], out["period"] = model, scenario, period
+    return out
+
+
+def melt_indices(df: pd.DataFrame, index_name: str, has_month: bool = False, has_year: bool = True) -> pd.DataFrame:
+    out = df.copy()
+    out["index"] = index_name
+    if has_month:
+        out["year"] = out["month"].values.astype("datetime64[Y]").astype(int) + 1970
+    else:
+        out["month"] = pd.NaT
+    if not has_year:
+        out["year"] = pd.NA  # period-level index (e.g. pooled P95 exceedance frequency), not annual
+    return out[["cell_lat", "cell_lon", "model", "scenario", "period", "index", "year", "month", "value"]]
+
+
+def main() -> None:
+    paths = load_paths()
+    params = load_params()
+    datasets_cfg = load_datasets()
+    raw_dir = Path(paths["raw_dir"])
+    processed_dir = Path(paths["processed_dir"])
+    climate_dir = raw_dir / "climate" / "isimip3b"
+
+    tx35_c = params["heat_tx35_threshold_c"]["value"]
+    tx40_c = params["heat_tx40_threshold_c"]["value"]
+    p95_pct = params["wet_day_p95_percentile"]["value"]
+
+    cells_by_country = unique_cells_by_country(processed_dir)
+
+    all_frames = []
+    for country in STUDY_COUNTRIES:
+        cells = cells_by_country[country]
+        print(f"{country}: {len(cells)} unique cells")
+
+        for model in datasets_cfg["models"]:
+            # Pass 1: baseline-only pr, to get each cell's wet-day P95 threshold.
+            hist_pr_path = climate_dir / model / "historical" / "pr" / f"{model}_historical_pr_{country}.nc"
+            hist_start, hist_end = period_years("historical", datasets_cfg)
+            hist_pr = pr_daily(hist_pr_path, cells, hist_start, hist_end)
+            hist_pr["period"] = "baseline"
+            p95 = precip.wet_day_p95(hist_pr, p95_pct)
+            del hist_pr
+            gc.collect()
+
+            for scenario in datasets_cfg["scenarios"]:
+                period = "baseline" if scenario == "historical" else "future"
+                start_year, end_year = period_years(scenario, datasets_cfg)
+
+                tasmax_path = climate_dir / model / scenario / "tasmax" / f"{model}_{scenario}_tasmax_{country}.nc"
+                tasmax = tasmax_daily(tasmax_path, cells, start_year, end_year)
+                tx35 = with_labels(heat.annual_hot_day_counts(tasmax, tx35_c), model, scenario, period)
+                tx40 = with_labels(heat.annual_hot_day_counts(tasmax, tx40_c), model, scenario, period)
+                n35 = with_labels(heat.monthly_hot_day_counts(tasmax, tx35_c), model, scenario, period)
+                del tasmax
+                gc.collect()
+
+                pr_path = climate_dir / model / scenario / "pr" / f"{model}_{scenario}_pr_{country}.nc"
+                pr = pr_daily(pr_path, cells, start_year, end_year)
+                exceed = precip.exceedance_frequency(pr, p95).rename(columns={"exceedance_frequency": "value"})
+                exceed = with_labels(exceed, model, scenario, period)
+                rx5day = with_labels(precip.annual_rx5day(pr), model, scenario, period)
+                del pr
+                gc.collect()
+
+                all_frames.append(melt_indices(tx35, "tx35"))
+                all_frames.append(melt_indices(tx40, "tx40"))
+                all_frames.append(melt_indices(n35, "n35", has_month=True))
+                all_frames.append(melt_indices(exceed, "p95_exceedance_frequency", has_year=False))
+                all_frames.append(melt_indices(rx5day, "rx5day"))
+
+                print(f"{country}/{model}/{scenario}: done")
+
+    indices = pd.concat(all_frames, ignore_index=True)
+    out_path = processed_dir / "indices_daily.parquet"
+    indices.to_parquet(out_path, index=False)
+    print(f"wrote {out_path}: {len(indices)} rows")
+
+    baseline_exceed = indices[
+        (indices["index"] == "p95_exceedance_frequency") & (indices["period"] == "baseline")
+    ]
+    per_cell_model = baseline_exceed.groupby(["cell_lat", "cell_lon", "model"])["value"].mean()
+    print(f"baseline P95 exceedance frequency: min={per_cell_model.min():.4f} max={per_cell_model.max():.4f}")
+    ok = per_cell_model.between(0.045, 0.055).all()
+    print(f"all cells/models within [4.5%, 5.5%]: {ok}")
+
+
+if __name__ == "__main__":
+    main()

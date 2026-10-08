@@ -1,0 +1,23 @@
+# Direct dependencies pinned to the versions used to produce the article results (Python 3.11).
+numpy==2.4.6
+pandas==2.3.3
+scipy==1.17.0
+scikit-learn==1.8.0
+xarray==2025.12.0
+netCDF4==1.7.4
+h5netcdf==1.8.1
+h5py==3.16.0
+pyarrow==24.0.0
+geopandas==1.1.2
+shapely==2.1.2
+pyogrio==0.12.1
+pyproj==3.7.2
+matplotlib==3.10.8
+Cartopy==0.25.0
+PyYAML==6.0.3
+requests==2.34.2
+openpyxl==3.1.5
+xlrd==2.0.2
+isimip-client==2.0.2
+pytest==9.0.2
+ruff==0.16.8
