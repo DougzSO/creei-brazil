@@ -46,7 +46,7 @@ Time and disk space are in [REPRODUCE.md](docs/REPRODUCE.md).
 Every bootstrap and null simulation uses `numpy.random.default_rng` with a fixed seed derived from 23, so reruns give
 identical numbers. See [REPRODUCE.md](docs/REPRODUCE.md) for the streams.
 
-## Licence and citation
+## License and citation
 
-Code: MIT, see `LICENSE`. The data keep the licences of their sources ([DATA_AVAILABILITY.md](docs/DATA_AVAILABILITY.md)).
+Code: MIT, see `LICENSE`. The data keep the licenses of their sources ([DATA_AVAILABILITY.md](docs/DATA_AVAILABILITY.md)).
 GADM geometry is not redistributed. Citation: see `CITATION.cff`.
